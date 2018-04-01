@@ -2,35 +2,86 @@ pragma solidity ^0.4.0;
 
 contract Lottery
 {
-    mapping(address => uint) UserBetAmount;
-    mapping(uint => address) Users;
-    
-    uint NofUsers = 0;
-    uint TotalBetAmount = 0;
-    
     address Owner;
-    
-    function Lottery()
+    modifier onlyowner()
     {
-        Owner = msg.sender;
+        if(msg.sender == Owner)
+        {
+            _;
+        }
+        else
+        {
+            throw;
+        }
+       
     }
     
-    function Bet() public payable
+    modifier onlyuser()
     {
-        if(msg.value > 0)
+        if(msg.sender != Owner)
         {
-            if(UserBetAmount[msg.sender] == 0)
+            _;
+        }
+        else
+        {
+            throw;
+        }
+       
+    }
+    
+    mapping(address => uint256) TokenBalances;
+    mapping(address => uint256) UserGuesses;
+    
+    uint private winN;
+    
+    function Lottery(uint winningNumber)
+    {
+        Owner = msg.sender;
+        TokenBalances[Owner] = 1000000;
+        
+        winN = winningNumber;
+    }
+    
+    
+    function requestToken() payable onlyuser
+    {
+        uint value = msg.value;
+        
+        uint ethToSend = value/ 1 ether;
+        
+        if(TokenBalances[Owner] >= ethToSend)
+        {
+            TokenBalances[Owner] -= ethToSend;
+            TokenBalances[msg.sender] += ethToSend;
+            
+            if((value % 1 ether) != 0)
             {
-                Users[NofUsers] = msg.sender; // new user enters into the lottery
+               msg.sender.transfer(value % 1 ether);
             }
             
-            UserBetAmount[msg.sender] += msg.value;
-            TotalBetAmount += msg.value;
+        }
+      
+    }
+    
+    function makeGuess(uint guess) payable 
+    {
+        if(guess >= 1 && guess <= 1000000)
+        {
+            if(TokenBalances[msg.sender] > 0)
+            {
+                UserGuesses[msg.sender] = guess;
+                TokenBalances[msg.sender] -= 1;
+            }
         }
     }
     
-    function ShowMeTotalFund() constant returns (uint Funds)
+    function queryTokenBalance() public constant returns (uint256 myToken)
     {
-        return TotalBetAmount;
+        return TokenBalances[msg.sender];
+    }
+    
+    function () payable
+    {
+        // fallback function
     }
 }
